@@ -222,7 +222,7 @@ func authorizeOAuthPage(c *Context, w http.ResponseWriter, r *http.Request) {
 	c.LogAudit("success")
 
 	w.Header().Set("X-Frame-Options", "SAMEORIGIN")
-	w.Header().Set("Content-Security-Policy", fmt.Sprintf("frame-ancestors 'self' %s", *c.App.Config().ServiceSettings.FrameAncestors))
+	w.Header().Set("Content-Security-Policy", fmt.Sprintf("frame-ancestors 'self' %s; object-src 'none'; base-uri 'self'; form-action 'self'", *c.App.Config().ServiceSettings.FrameAncestors))
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache, max-age=31556926")
 
