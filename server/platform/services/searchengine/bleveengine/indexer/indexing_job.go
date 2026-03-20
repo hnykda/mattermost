@@ -150,14 +150,15 @@ func (worker *BleveIndexerWorker) DoJob(job *model.Job) {
 	logger := worker.logger.With(jobs.JobLoggerFields(job)...)
 	logger.Debug("Worker: Received a new candidate job.")
 
-	claimed, err := worker.jobServer.ClaimJob(job)
+	claimedJob, err := worker.jobServer.ClaimJob(job)
 	if err != nil {
 		logger.Warn("Worker: Error occurred while trying to claim job", mlog.Err(err))
 		return
 	}
-	if !claimed {
+	if claimedJob == nil {
 		return
 	}
+	job = claimedJob
 
 	logger.Info("Worker: Indexing job claimed by worker")
 
@@ -550,7 +551,7 @@ func (worker *BleveIndexerWorker) BulkIndexChannels(logger mlog.LoggerIFace, cha
 			}
 
 			// Get teamMember ids from channelid
-			teamMemberIDs, err := worker.jobServer.Store.Channel().GetTeamMembersForChannel(channel.Id)
+			teamMemberIDs, err := worker.jobServer.Store.Channel().GetTeamMembersForChannel(request.EmptyContext(worker.logger), channel.Id)
 			if err != nil {
 				return nil, model.NewAppError("BleveIndexerWorker.BulkIndexChannels", "bleveengine.indexer.do_job.bulk_index_channels.batch_error", nil, "", http.StatusInternalServerError).Wrap(err)
 			}

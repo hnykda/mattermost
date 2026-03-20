@@ -15,6 +15,7 @@ const (
 	JobTypeCLIMessageExport              = "cli_message_export"
 	JobTypeElasticsearchPostIndexing     = "elasticsearch_post_indexing"
 	JobTypeElasticsearchPostAggregation  = "elasticsearch_post_aggregation"
+	JobTypeBlevePostIndexing             = "bleve_post_indexing" // restored for Bleve search support
 	JobTypeLdapSync                      = "ldap_sync"
 	JobTypeMigrations                    = "migrations"
 	JobTypePlugins                       = "plugins"

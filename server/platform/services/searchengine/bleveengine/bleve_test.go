@@ -52,7 +52,7 @@ func (s *BleveEngineTestSuite) setupStore() {
 	if driverName == "" {
 		driverName = model.DatabaseDriverPostgres
 	}
-	s.SQLSettings = storetest.MakeSqlSettings(driverName, false)
+	s.SQLSettings = storetest.MakeSqlSettings(driverName)
 
 	var err error
 	s.SQLStore, err = sqlstore.New(*s.SQLSettings, s.Context.Logger(), nil)
@@ -92,7 +92,7 @@ func (s *BleveEngineTestSuite) TearDownSuite() {
 
 func (s *BleveEngineTestSuite) TestBleveSearchStoreTests() {
 	searchTestEngine := &searchtest.SearchTestEngine{
-		Driver: searchtest.EngineBleve,
+		Driver: searchtest.EngineAll,
 	}
 
 	s.Run("TestSearchChannelStore", func() {
