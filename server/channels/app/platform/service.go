@@ -30,6 +30,7 @@ import (
 	"github.com/mattermost/mattermost/server/v8/einterfaces"
 	"github.com/mattermost/mattermost/server/v8/platform/services/cache"
 	"github.com/mattermost/mattermost/server/v8/platform/services/searchengine"
+	"github.com/mattermost/mattermost/server/v8/platform/services/searchengine/bleveengine"
 	"github.com/mattermost/mattermost/server/v8/platform/shared/filestore"
 )
 
@@ -230,6 +231,11 @@ func New(sc ServiceConfig, options ...Option) (*PlatformService, error) {
 
 	// Step 3: Search Engine
 	searchEngine := searchengine.NewBroker(ps.Config())
+	bleveEngine := bleveengine.NewBleveEngine(ps.Config())
+	if err := bleveEngine.Start(); err != nil {
+		return nil, err
+	}
+	searchEngine.RegisterBleveEngine(bleveEngine)
 	ps.SearchEngine = searchEngine
 
 	// Step 4: Init Enterprise

@@ -226,6 +226,9 @@ const (
 	ElasticsearchSettingsESBackend                          = "elasticsearch"
 	ElasticsearchSettingsOSBackend                          = "opensearch"
 
+	BleveSettingsDefaultIndexDir  = ""
+	BleveSettingsDefaultBatchSize = 10000
+
 	DataRetentionSettingsDefaultMessageRetentionDays           = 365
 	DataRetentionSettingsDefaultMessageRetentionHours          = 0
 	DataRetentionSettingsDefaultFileRetentionDays              = 365
@@ -3251,6 +3254,46 @@ func (s *ElasticsearchSettings) SetDefaults() {
 	}
 }
 
+type BleveSettings struct {
+	IndexDir                      *string `access:"experimental_bleve"` // telemetry: none
+	EnableIndexing                *bool   `access:"experimental_bleve"`
+	EnableSearching               *bool   `access:"experimental_bleve"`
+	EnableAutocomplete            *bool   `access:"experimental_bleve"`
+	BulkIndexingTimeWindowSeconds *int    `json:",omitempty"` // telemetry: none
+	BatchSize                     *int    `access:"experimental_bleve"`
+}
+
+func (bs *BleveSettings) SetDefaults() {
+	if bs.IndexDir == nil {
+		bs.IndexDir = NewPointer(BleveSettingsDefaultIndexDir)
+	}
+
+	if bs.EnableIndexing == nil {
+		bs.EnableIndexing = NewPointer(false)
+	}
+
+	if bs.EnableSearching == nil {
+		bs.EnableSearching = NewPointer(false)
+	}
+
+	if bs.EnableAutocomplete == nil {
+		bs.EnableAutocomplete = NewPointer(false)
+	}
+
+	if bs.BatchSize == nil {
+		bs.BatchSize = NewPointer(BleveSettingsDefaultBatchSize)
+	}
+}
+
+func (bs *BleveSettings) isValid() *AppError {
+	if *bs.EnableIndexing {
+		if *bs.IndexDir == "" {
+			return NewAppError("Config.IsValid", "model.config.is_valid.bleve_settings.directory.app_error", nil, "", http.StatusBadRequest)
+		}
+	}
+	return nil
+}
+
 type DataRetentionSettings struct {
 	EnableMessageDeletion          *bool   `access:"compliance_data_retention_policy"`
 	EnableFileDeletion             *bool   `access:"compliance_data_retention_policy"`
@@ -3985,6 +4028,7 @@ type Config struct {
 	ExperimentalSettings        ExperimentalSettings
 	AnalyticsSettings           AnalyticsSettings
 	ElasticsearchSettings       ElasticsearchSettings
+	BleveSettings               BleveSettings
 	DataRetentionSettings       DataRetentionSettings
 	MessageExportSettings       MessageExportSettings
 	JobSettings                 JobSettings
@@ -4098,6 +4142,7 @@ func (o *Config) SetDefaults() {
 	o.LocalizationSettings.SetDefaults()
 	o.AutoTranslationSettings.SetDefaults()
 	o.ElasticsearchSettings.SetDefaults()
+	o.BleveSettings.SetDefaults()
 	o.NativeAppSettings.SetDefaults()
 	o.IntuneSettings.SetDefaults()
 	o.DataRetentionSettings.SetDefaults()
@@ -4205,6 +4250,10 @@ func (o *Config) IsValid() *AppError {
 	}
 
 	if appErr := o.ElasticsearchSettings.isValid(); appErr != nil {
+		return appErr
+	}
+
+	if appErr := o.BleveSettings.isValid(); appErr != nil {
 		return appErr
 	}
 
