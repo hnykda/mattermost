@@ -1,3 +1,64 @@
+# hnykda/mattermost — bleve-restore fork
+
+> **This is a personal fork of [mattermost/mattermost](https://github.com/mattermost/mattermost).**
+> The `bleve-restore` branch restores the Bleve embedded search engine that was removed in v11.
+> See below for details. Everything else is upstream.
+
+---
+
+## What this fork does
+
+Mattermost v11 removed the [Bleve](https://github.com/blevesearch/bleve) pure-Go full-text search engine
+that had worked well for self-hosted setups. The stated direction is Elasticsearch/OpenSearch, which is
+overkill for a small personal instance and requires a paid license for the hosted offering.
+
+Since Mattermost is AGPL, we restored the Bleve code from v10.5.0. The `SearchEngineInterface` contract
+is unchanged between v10 and v11, so the implementation slots in cleanly as a single additive commit.
+
+### Changes over upstream v11.5.x
+
+| File | Change |
+|------|--------|
+| `server/platform/services/searchengine/bleveengine/` | Restored from v10.5.0 (index management, search, autocomplete) |
+| `server/platform/services/searchengine/bleveengine/indexer/` | Background bulk indexer worker |
+| `server/channels/api4/bleve.go` | Restored `POST /api/v4/bleve/purge_indexes` endpoint |
+| `server/platform/services/searchengine/searchengine.go` | Added `BleveEngine` field to `Broker`, wired into `UpdateConfig`/`GetActiveEngines` |
+| `server/public/model/config.go` | Added `BleveSettings` struct and wired into `Config.SetDefaults`/`IsValid` |
+| `server/channels/app/platform/service.go` | Bleve engine initialization at startup |
+| `server/go.mod` | Added `github.com/blevesearch/bleve/v2 v2.4.1` |
+
+### Admin UI note
+
+The search configuration appears under **System Console → Elasticsearch**, not under a dedicated
+"Bleve" section. This is by design — Mattermost's admin UI is a prebuilt React webapp (static files)
+that we don't modify; renaming the label would require a full frontend build. The underlying functionality
+is correct: when Bleve is active it registers through the same `SearchEngineInterface` and the config
+keys (`MM_BLEVESETTINGS_*`) work as expected. The "Elasticsearch" label in the UI is just cosmetic.
+
+### Enabling Bleve
+
+Set these environment variables (or the equivalent in `config.json`):
+
+```
+MM_BLEVESETTINGS_INDEXDIR=/mattermost/data/bleve-indexes
+MM_BLEVESETTINGS_ENABLEINDEXING=true
+MM_BLEVESETTINGS_ENABLESEARCHING=true
+MM_BLEVESETTINGS_ENABLEAUTOCOMPLETE=true
+```
+
+After first deploy, go to **System Console → Elasticsearch → Index Now** to populate the index
+from existing data.
+
+### Upgrading to a new Mattermost version
+
+```bash
+git fetch upstream
+git rebase v11.x.0   # conflicts unlikely — integration points are stable
+git push origin bleve-restore --force-with-lease
+```
+
+---
+
 # [![Mattermost logo](https://user-images.githubusercontent.com/7205829/137170381-fe86eef0-bccc-4fdd-8e92-b258884ebdd7.png)](https://mattermost.com)
 
 [Mattermost](https://mattermost.com) is an open core, self-hosted collaboration platform that offers chat, workflow automation, voice calling, screen sharing, and AI integration. This repo is the primary source for core development on the Mattermost platform; it's written in Go and React, runs as a single Linux binary, and relies on PostgreSQL. A new compiled version is released under an MIT license every month on the 16th.
