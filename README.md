@@ -25,7 +25,41 @@ is unchanged between v10 and v11, so the implementation slots in cleanly as a si
 | `server/platform/services/searchengine/searchengine.go` | Added `BleveEngine` field to `Broker`, wired into `UpdateConfig`/`GetActiveEngines` |
 | `server/public/model/config.go` | Added `BleveSettings` struct and wired into `Config.SetDefaults`/`IsValid` |
 | `server/channels/app/platform/service.go` | Bleve engine initialization at startup |
+| `server/channels/app/server.go` | Registers `BleveIndexerWorker` so `bleve_post_indexing` jobs can be created via API |
 | `server/go.mod` | Added `github.com/blevesearch/bleve/v2 v2.4.1` |
+
+### Search analyzer
+
+The original v10 code used Bleve's `standard` analyzer (unicode tokenization + lowercase, no stemming).
+This fork uses a custom `en_cs` analyzer instead:
+
+- **Unicode tokenizer** — splits on word boundaries
+- **Possessive filter** — strips English `'s`
+- **Lowercase**
+- **English stop words** — removes common words like "the", "is", "and"
+- **Czech stop words** — removes common words like "a", "ale", "bez", "bylo"
+- **Porter stemmer** — reduces words to their root ("jumping" → "jump", "running" → "run")
+
+This gives proper stemming for English and stop-word filtering for both English and Czech.
+Czech morphology is complex enough that Porter stemming won't cover all inflections, but the
+combination is a significant improvement over plain substring matching for bilingual instances.
+
+**Note:** the analyzer is baked into the index at creation time. If you upgrade from a version
+of this fork that used the `standard` analyzer, you need to purge the existing indexes and
+re-index so the new mapping takes effect:
+
+```bash
+# Purge old indexes
+curl -X POST https://<your-mattermost-url>/api/v4/bleve/purge_indexes \
+  -H "Authorization: Bearer <your-token>"
+
+# Re-index (pod restart after purge creates new indexes with correct mapping,
+# then trigger bulk indexing for historical messages)
+curl -X POST https://<your-mattermost-url>/api/v4/jobs \
+  -H "Authorization: Bearer <your-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"bleve_post_indexing"}'
+```
 
 ### Admin UI note
 
