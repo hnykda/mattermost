@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/blevesearch/bleve/v2"
+	_ "github.com/blevesearch/bleve/v2/analysis/analyzer/custom"
 	"github.com/blevesearch/bleve/v2/analysis/analyzer/keyword"
 	"github.com/blevesearch/bleve/v2/analysis/lang/cs"
 	_ "github.com/blevesearch/bleve/v2/analysis/lang/en"
