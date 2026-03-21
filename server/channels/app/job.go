@@ -229,7 +229,7 @@ func (a *App) SessionHasPermissionToReadJob(session model.Session, jobType strin
 		return a.SessionHasPermissionTo(session, model.PermissionReadDataRetentionJob), model.PermissionReadDataRetentionJob
 	case model.JobTypeMessageExport:
 		return a.SessionHasPermissionTo(session, model.PermissionReadComplianceExportJob), model.PermissionReadComplianceExportJob
-	case model.JobTypeElasticsearchPostIndexing:
+	case model.JobTypeElasticsearchPostIndexing, model.JobTypeBlevePostIndexing:
 		return a.SessionHasPermissionTo(session, model.PermissionReadElasticsearchPostIndexingJob), model.PermissionReadElasticsearchPostIndexingJob
 	case model.JobTypeElasticsearchPostAggregation:
 		return a.SessionHasPermissionTo(session, model.PermissionReadElasticsearchPostAggregationJob), model.PermissionReadElasticsearchPostAggregationJob
