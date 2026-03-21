@@ -29,11 +29,9 @@ is unchanged between v10 and v11, so the implementation slots in cleanly as a si
 
 ### Admin UI note
 
-The search configuration appears under **System Console → Elasticsearch**, not under a dedicated
-"Bleve" section. This is by design — Mattermost's admin UI is a prebuilt React webapp (static files)
-that we don't modify; renaming the label would require a full frontend build. The underlying functionality
-is correct: when Bleve is active it registers through the same `SearchEngineInterface` and the config
-keys (`MM_BLEVESETTINGS_*`) work as expected. The "Elasticsearch" label in the UI is just cosmetic.
+**There is no Bleve section in the System Console.** The Elasticsearch UI section is enterprise-only
+and hidden in Team Edition. The Bleve config keys (`MM_BLEVESETTINGS_*`) work correctly via environment
+variables — the UI just isn't there to configure or trigger them.
 
 ### Enabling Bleve
 
@@ -46,8 +44,21 @@ MM_BLEVESETTINGS_ENABLESEARCHING=true
 MM_BLEVESETTINGS_ENABLEAUTOCOMPLETE=true
 ```
 
-After first deploy, go to **System Console → Elasticsearch → Index Now** to populate the index
-from existing data.
+### Bulk indexing existing messages
+
+Since there's no UI to trigger indexing, use the API with a personal access token.
+
+**Get a token:** click your avatar (top-right) → **Profile** → **Security** → **Personal Access Tokens** → Create.
+
+```bash
+curl -X POST https://<your-mattermost-url>/api/v4/jobs \
+  -H "Authorization: Bearer <your-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"bleve_post_indexing"}'
+```
+
+New messages are indexed automatically as they arrive — the bulk job is only needed once for
+historical data (and after any index purge).
 
 ### Upgrading to a new Mattermost version
 
