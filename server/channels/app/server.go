@@ -65,6 +65,8 @@ import (
 	"github.com/mattermost/mattermost/server/v8/channels/jobs/refresh_materialized_views"
 	"github.com/mattermost/mattermost/server/v8/channels/jobs/resend_invitation_email"
 	"github.com/mattermost/mattermost/server/v8/channels/jobs/s3_path_migration"
+	"github.com/mattermost/mattermost/server/v8/platform/services/searchengine/bleveengine"
+	"github.com/mattermost/mattermost/server/v8/platform/services/searchengine/bleveengine/indexer"
 	"github.com/mattermost/mattermost/server/v8/channels/store"
 	"github.com/mattermost/mattermost/server/v8/channels/utils"
 	"github.com/mattermost/mattermost/server/v8/config"
@@ -1477,6 +1479,13 @@ func (s *Server) initJobs() {
 	if jobsElasticsearchIndexerInterface != nil {
 		builder := jobsElasticsearchIndexerInterface(s)
 		s.Jobs.RegisterJobType(model.JobTypeElasticsearchPostIndexing, builder.MakeWorker(), nil)
+	}
+
+	// Register Bleve bulk indexing worker (restored from v10; no scheduler needed,
+	// jobs are triggered manually via API)
+	if bleveEngine := s.Platform().SearchEngine.BleveEngine; bleveEngine != nil {
+		bleveWorker := indexer.MakeWorker(s.Jobs, bleveEngine.(*bleveengine.BleveEngine))
+		s.Jobs.RegisterJobType(model.JobTypeBlevePostIndexing, bleveWorker, nil)
 	}
 
 	if jobsLdapSyncInterface != nil {
