@@ -142,7 +142,7 @@ func (a *App) SessionHasPermissionToCreateJob(session model.Session, job *model.
 		return a.SessionHasPermissionTo(session, model.PermissionCreateDataRetentionJob), model.PermissionCreateDataRetentionJob
 	case model.JobTypeMessageExport:
 		return a.SessionHasPermissionTo(session, model.PermissionCreateComplianceExportJob), model.PermissionCreateComplianceExportJob
-	case model.JobTypeElasticsearchPostIndexing:
+	case model.JobTypeElasticsearchPostIndexing, model.JobTypeBlevePostIndexing:
 		return a.SessionHasPermissionTo(session, model.PermissionCreateElasticsearchPostIndexingJob), model.PermissionCreateElasticsearchPostIndexingJob
 	case model.JobTypeElasticsearchPostAggregation:
 		return a.SessionHasPermissionTo(session, model.PermissionCreateElasticsearchPostAggregationJob), model.PermissionCreateElasticsearchPostAggregationJob
@@ -193,7 +193,7 @@ func (a *App) SessionHasPermissionToManageJob(session model.Session, job *model.
 		permission = model.PermissionManageDataRetentionJob
 	case model.JobTypeMessageExport:
 		permission = model.PermissionManageComplianceExportJob
-	case model.JobTypeElasticsearchPostIndexing:
+	case model.JobTypeElasticsearchPostIndexing, model.JobTypeBlevePostIndexing:
 		permission = model.PermissionManageElasticsearchPostIndexingJob
 	case model.JobTypeElasticsearchPostAggregation:
 		permission = model.PermissionManageElasticsearchPostAggregationJob
