@@ -14,7 +14,8 @@ import (
 
 	"github.com/blevesearch/bleve/v2"
 	"github.com/blevesearch/bleve/v2/analysis/analyzer/keyword"
-	"github.com/blevesearch/bleve/v2/analysis/analyzer/standard"
+	"github.com/blevesearch/bleve/v2/analysis/lang/cs"
+	_ "github.com/blevesearch/bleve/v2/analysis/lang/en"
 	"github.com/blevesearch/bleve/v2/mapping"
 
 	"github.com/mattermost/mattermost/server/public/model"
@@ -41,6 +42,8 @@ type BleveEngine struct {
 	indexSync    bool
 }
 
+const enCsAnalyzerName = "en_cs"
+
 var keywordMapping *mapping.FieldMapping
 var standardMapping *mapping.FieldMapping
 var dateMapping *mapping.FieldMapping
@@ -49,10 +52,34 @@ func init() {
 	keywordMapping = bleve.NewTextFieldMapping()
 	keywordMapping.Analyzer = keyword.Name
 
+	// en_cs: unicode tokenizer → possessive_en → lowercase → stop_en → stop_cs → porter stemmer.
+	// Gives English stemming and stop-word removal for both English and Czech messages.
+	// The index mapping registers this analyzer; existing indexes must be purged and
+	// re-indexed after upgrading to pick up the new mapping.
 	standardMapping = bleve.NewTextFieldMapping()
-	standardMapping.Analyzer = standard.Name
+	standardMapping.Analyzer = enCsAnalyzerName
 
 	dateMapping = bleve.NewNumericFieldMapping()
+}
+
+func addEnCsAnalyzer(m *mapping.IndexMappingImpl) {
+	// Side-effect import of lang/en registers "possessive_en", "stop_en", "stemmer_porter".
+	// We import lang/cs for its init() which registers "stop_cs".
+	_ = cs.StopName // reference to ensure the cs package init() runs
+	err := m.AddCustomAnalyzer(enCsAnalyzerName, map[string]interface{}{
+		"type":      "custom",
+		"tokenizer": "unicode",
+		"token_filters": []interface{}{
+			"possessive_en",
+			"to_lower",
+			"stop_en",
+			"stop_cs",
+			"stemmer_porter",
+		},
+	})
+	if err != nil {
+		panic("bleveengine: failed to register en_cs analyzer: " + err.Error())
+	}
 }
 
 func getChannelIndexMapping() *mapping.IndexMappingImpl {
@@ -65,6 +92,7 @@ func getChannelIndexMapping() *mapping.IndexMappingImpl {
 	channelMapping.AddFieldMappingsAt("TeamMemberIDs", keywordMapping)
 
 	indexMapping := bleve.NewIndexMapping()
+	addEnCsAnalyzer(indexMapping)
 	indexMapping.AddDocumentMapping("_default", channelMapping)
 
 	return indexMapping
@@ -83,6 +111,7 @@ func getPostIndexMapping() *mapping.IndexMappingImpl {
 	postMapping.AddFieldMappingsAt("Attachments", standardMapping)
 
 	indexMapping := bleve.NewIndexMapping()
+	addEnCsAnalyzer(indexMapping)
 	indexMapping.AddDocumentMapping("_default", postMapping)
 
 	return indexMapping
@@ -100,6 +129,7 @@ func getFileIndexMapping() *mapping.IndexMappingImpl {
 	fileMapping.AddFieldMappingsAt("Content", standardMapping)
 
 	indexMapping := bleve.NewIndexMapping()
+	addEnCsAnalyzer(indexMapping)
 	indexMapping.AddDocumentMapping("_default", fileMapping)
 
 	return indexMapping
