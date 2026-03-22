@@ -21,7 +21,6 @@ is unchanged between v10 and v11, so the implementation slots in cleanly as a si
 |------|--------|
 | `server/platform/services/searchengine/bleveengine/` | Restored from v10.5.0 (index management, search, autocomplete) |
 | `server/platform/services/searchengine/bleveengine/indexer/` | Background bulk indexer worker |
-| `server/channels/api4/bleve.go` | Restored `POST /api/v4/bleve/purge_indexes` endpoint |
 | `server/platform/services/searchengine/searchengine.go` | Added `BleveEngine` field to `Broker`, wired into `UpdateConfig`/`GetActiveEngines` |
 | `server/public/model/config.go` | Added `BleveSettings` struct and wired into `Config.SetDefaults`/`IsValid` |
 | `server/channels/app/platform/service.go` | Bleve engine initialization at startup |
@@ -46,15 +45,20 @@ combination is a significant improvement over plain substring matching for bilin
 
 **Note:** the analyzer is baked into the index at creation time. If you upgrade from a version
 of this fork that used the `standard` analyzer, you need to purge the existing indexes and
-re-index so the new mapping takes effect:
+re-index so the new mapping takes effect.
+
+The purge API endpoint (`/api/v4/bleve/purge_indexes`) was removed from this fork since the
+`channels/api4/bleve.go` file was dropped. Purge manually by deleting the index directory on
+the host and restarting the pod:
 
 ```bash
-# Purge old indexes
-curl -X POST https://<your-mattermost-url>/api/v4/bleve/purge_indexes \
-  -H "Authorization: Bearer <your-token>"
+# 1. Delete index directory on the host (adjust path to match MM_BLEVESETTINGS_INDEXDIR)
+ssh your-host "rm -rf /path/to/mattermost/data/bleve-indexes"
 
-# Re-index (pod restart after purge creates new indexes with correct mapping,
-# then trigger bulk indexing for historical messages)
+# 2. Restart the pod so Mattermost opens fresh indexes with the new mapping
+kubectl rollout restart deployment/mattermost -n apps
+
+# 3. Trigger bulk indexing for historical messages (requires a personal access token)
 curl -X POST https://<your-mattermost-url>/api/v4/jobs \
   -H "Authorization: Bearer <your-token>" \
   -H "Content-Type: application/json" \
