@@ -90,6 +90,12 @@ func TestCsLightAnalyzer(t *testing.T) {
 		// is there), so test with words actually in the list.
 		assert.Empty(t, cs("aby tak proč"))
 	})
+
+	t.Run("unaccented stop word variants removed", func(t *testing.T) {
+		// "nové" is a stop word; its unaccented spelling must behave the same,
+		// otherwise unaccented multi-word AND queries can never match.
+		assert.Empty(t, cs("nové nove proč proc"))
+	})
 }
 
 func TestEnCsAnalyzer(t *testing.T) {
@@ -163,6 +169,7 @@ func TestSearchPostsCzech(t *testing.T) {
 		{"user", "english", "english stemming: user matches users"},
 		{"database", "english", "english stemming: database matches databases"},
 		{"nové stromy", "czech", "multi-word czech AND query"},
+		{"nove stromy", "czech", "unaccented multi-word query (nove is a folded stop word)"},
 	} {
 		results := search(tc.terms)
 		assert.Contains(t, results, ids[tc.expect], "%s (terms: %q, results: %v)", tc.comment, tc.terms, results)

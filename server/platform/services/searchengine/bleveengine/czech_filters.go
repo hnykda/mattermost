@@ -7,6 +7,8 @@ import (
 	"unicode"
 
 	"github.com/blevesearch/bleve/v2/analysis"
+	"github.com/blevesearch/bleve/v2/analysis/lang/cs"
+	"github.com/blevesearch/bleve/v2/analysis/token/stop"
 	"github.com/blevesearch/bleve/v2/registry"
 	"golang.org/x/text/unicode/norm"
 )
@@ -14,6 +16,7 @@ import (
 const (
 	CzechLightStemmerName = "stemmer_cs_light"
 	FoldDiacriticsName    = "fold_diacritics"
+	CzechStopFoldedName   = "stop_cs_folded"
 )
 
 func init() {
@@ -24,6 +27,25 @@ func init() {
 	registry.RegisterTokenFilter(FoldDiacriticsName,
 		func(config map[string]interface{}, cache *registry.Cache) (analysis.TokenFilter, error) {
 			return &foldDiacriticsFilter{}, nil
+		})
+	// stop_cs_folded: the Czech stop list with unaccented variants added. The stock
+	// stop_cs list is accented-only ("nové" is listed, "nove" is not), so an
+	// unaccented query keeps a token its accented counterpart drops from the index,
+	// and AND-matching then fails ("nove stromy" found nothing while "nové stromy"
+	// matched). Stop filtering runs before folding (the stemmer needs diacritics),
+	// so the list itself must cover both spellings.
+	registry.RegisterTokenFilter(CzechStopFoldedName,
+		func(config map[string]interface{}, cache *registry.Cache) (analysis.TokenFilter, error) {
+			csMap, err := cache.TokenMapNamed(cs.StopName)
+			if err != nil {
+				return nil, err
+			}
+			combined := make(analysis.TokenMap, 2*len(csMap))
+			for word := range csMap {
+				combined[word] = true
+				combined[string(foldDiacritics([]byte(word)))] = true
+			}
+			return stop.NewStopTokensFilter(combined), nil
 		})
 }
 

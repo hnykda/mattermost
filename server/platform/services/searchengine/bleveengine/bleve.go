@@ -82,7 +82,8 @@ func init() {
 
 func addCustomAnalyzers(m *mapping.IndexMappingImpl) {
 	// Side-effect import of lang/en registers "possessive_en", "stop_en", "stemmer_porter".
-	// We import lang/cs for its init() which registers "stop_cs".
+	// We import lang/cs for its init() which registers the "stop_cs" token map that
+	// stop_cs_folded (czech_filters.go) extends with unaccented variants.
 	_ = cs.StopName // reference to ensure the cs package init() runs
 	err := m.AddCustomAnalyzer(enCsAnalyzerName, map[string]interface{}{
 		"type":      "custom",
@@ -91,7 +92,7 @@ func addCustomAnalyzers(m *mapping.IndexMappingImpl) {
 			"possessive_en",
 			"to_lower",
 			"stop_en",
-			"stop_cs",
+			CzechStopFoldedName,
 			"stemmer_porter",
 			FoldDiacriticsName,
 		},
@@ -108,7 +109,7 @@ func addCustomAnalyzers(m *mapping.IndexMappingImpl) {
 			"possessive_en",
 			"to_lower",
 			"stop_en",
-			"stop_cs",
+			CzechStopFoldedName,
 			CzechLightStemmerName,
 			FoldDiacriticsName,
 		},
