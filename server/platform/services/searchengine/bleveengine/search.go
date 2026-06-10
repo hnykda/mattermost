@@ -160,13 +160,19 @@ func (b *BleveEngine) SearchPosts(channels model.ChannelList, searchParams []*mo
 				notTermQueries = append(notTermQueries, hashtagQ)
 			}
 		} else {
+			// Message text is indexed twice: "Message" (English analyzer) and
+			// "MessageCs" (Czech light stemmer). Query both fields as a
+			// disjunction so the analyzer matching the language of the terms
+			// produces the hit.
 			if params.Terms != "" {
 				terms := []string{}
 				for _, term := range strings.Split(params.Terms, " ") {
 					if strings.HasSuffix(term, "*") {
 						messageQ := bleve.NewWildcardQuery(term)
 						messageQ.SetField("Message")
-						termQueries = append(termQueries, messageQ)
+						messageCsQ := bleve.NewWildcardQuery(term)
+						messageCsQ.SetField("MessageCs")
+						termQueries = append(termQueries, bleve.NewDisjunctionQuery(messageQ, messageCsQ))
 					} else {
 						terms = append(terms, term)
 					}
@@ -176,7 +182,10 @@ func (b *BleveEngine) SearchPosts(channels model.ChannelList, searchParams []*mo
 					messageQ := bleve.NewMatchQuery(strings.Join(terms, " "))
 					messageQ.SetField("Message")
 					messageQ.SetOperator(termOperator)
-					termQueries = append(termQueries, messageQ)
+					messageCsQ := bleve.NewMatchQuery(strings.Join(terms, " "))
+					messageCsQ.SetField("MessageCs")
+					messageCsQ.SetOperator(termOperator)
+					termQueries = append(termQueries, bleve.NewDisjunctionQuery(messageQ, messageCsQ))
 				}
 			}
 
@@ -184,7 +193,10 @@ func (b *BleveEngine) SearchPosts(channels model.ChannelList, searchParams []*mo
 				messageQ := bleve.NewMatchQuery(params.ExcludedTerms)
 				messageQ.SetField("Message")
 				messageQ.SetOperator(termOperator)
-				notTermQueries = append(notTermQueries, messageQ)
+				messageCsQ := bleve.NewMatchQuery(params.ExcludedTerms)
+				messageCsQ.SetField("MessageCs")
+				messageCsQ.SetOperator(termOperator)
+				notTermQueries = append(notTermQueries, bleve.NewDisjunctionQuery(messageQ, messageCsQ))
 			}
 		}
 	}
